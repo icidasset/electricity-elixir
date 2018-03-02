@@ -1,0 +1,2 @@
+defmodule Electricity do
+end

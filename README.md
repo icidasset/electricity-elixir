@@ -1,1 +1,1 @@
-__Electrical calculations in Elixir.__
+__Electrical engineering in Elixir.__

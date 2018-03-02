@@ -1,2 +1,0 @@
-defmodule ElectricalCalculations do
-end

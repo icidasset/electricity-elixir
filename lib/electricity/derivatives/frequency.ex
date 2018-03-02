@@ -1,4 +1,4 @@
-defmodule ElectricalCalculations.Frequency do
+defmodule Electricity.Derivatives.Frequency do
   @moduledoc """
   Frequency calculations.
   """
@@ -14,8 +14,8 @@ defmodule ElectricalCalculations.Frequency do
   Calculate the resonant frequency of a single-layer air coil.
   """
   def resonant_frequency_single_layer_air_coil(coil) do
-    l = ElectricalCalculations.Inductance.single_layer_air_coil(coil)
-    c = ElectricalCalculations.Capacitance.single_layer_air_coil(coil)
+    l = Electricity.Derivatives.Inductance.single_layer_air_coil(coil)
+    c = Electricity.Derivatives.Capacitance.single_layer_air_coil(coil)
 
     generic(inductance: l, capacitance: c)
   end

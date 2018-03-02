@@ -1,4 +1,4 @@
-defmodule ElectricalCalculations.Capacitance do
+defmodule Electricity.Derivatives.Capacitance do
   @moduledoc """
   Capacitance calculations.
   """

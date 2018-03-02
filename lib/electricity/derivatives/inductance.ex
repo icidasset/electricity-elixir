@@ -1,4 +1,4 @@
-defmodule ElectricalCalculations.Inductance do
+defmodule Electricity.Derivatives.Inductance do
   @doc """
   Calculate the inductance of a single-layer air coil.
 
