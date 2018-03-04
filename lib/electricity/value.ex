@@ -52,6 +52,40 @@ defmodule Electricity.Value do
   def reduce_unit_to_zero(value) do
     %{value | amount: normalize(value), exponent: 0}
   end
+
+  @doc """
+  Turn a raw number into a `Value`.
+  """
+  @spec pack(float()) :: t()
+  def pack(number) do
+    semi_rounded_number =
+      number
+      |> (fn x -> x / 1 end).()
+      |> abs()
+      |> Float.round(15)
+
+    split =
+      semi_rounded_number
+      |> to_string()
+      |> String.split(".")
+
+    case split do
+      [_, stuff_after_the_comma] ->
+        exponent = String.length(stuff_after_the_comma)
+        amount = semi_rounded_number * :math.pow(10, exponent)
+
+        %Value{
+          amount: round(amount),
+          exponent: -exponent
+        }
+
+      _ ->
+        %Value{
+          amount: number,
+          exponent: 0
+        }
+    end
+  end
 end
 
 ###############################
@@ -109,7 +143,7 @@ definst Semigroup, for: Value do
         |> (fn x -> x + Value.normalize(right) end).()
         |> (fn x -> x * :math.pow(10, new_exponent * -1) end).()
         |> round()
-        |> min(0)
+        |> max(0)
     }
   end
 end
