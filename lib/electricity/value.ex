@@ -12,10 +12,12 @@ defmodule Electricity.Value do
   For example:
   42 micro Ohms
 
-      %Electricity.Value{
-        amount: 42,
-        unit: -6
-      }
+  ```
+  %Electricity.Value{
+    amount: 42,
+    unit: -6
+  }
+  ```
   """
 
   alias __MODULE__
@@ -57,7 +59,7 @@ end
 
 alias Electricity.Value
 alias TypeClass.Property.Generator
-alias Witchcraft.Semigroup
+alias Witchcraft.{Functor, Semigroup}
 
 # Generator
 # ---------
@@ -108,5 +110,14 @@ definst Semigroup, for: Value do
         |> round()
         |> min(0)
     }
+  end
+end
+
+# Functor
+# -------
+
+definst Functor, for: Value do
+  def map(value, func) do
+    %{value | amount: func.(value.amount)}
   end
 end
