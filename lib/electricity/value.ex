@@ -76,6 +76,7 @@ defmodule Electricity.Value do
     2000.0
 
   """
+  @spec scale(float() | integer(), integer()) :: float()
   def scale(number, exponent) do
     Float.round(
       number * :math.pow(10, exponent),
@@ -83,14 +84,15 @@ defmodule Electricity.Value do
     )
   end
 
+  @spec scale_and_round(float() | integer(), integer()) :: integer()
   def scale_and_round(number, exponent) do
     number
     |> scale(exponent)
     |> round()
   end
 
+  @spec ensure_float(float() | integer()) :: float()
   def ensure_float(x), do: x / 1
-  def make_negative(x), do: x * -1
 
   # Rays
   # ====
@@ -98,6 +100,7 @@ defmodule Electricity.Value do
   @doc """
   Remove zeros from the number.
   """
+  @spec shrink_ray(float()) :: t()
   def shrink_ray(float) do
     str =
       float
@@ -119,6 +122,7 @@ defmodule Electricity.Value do
   @doc """
   Ensure a natural number.
   """
+  @spec expand_ray(float()) :: t()
   def expand_ray(float) do
     amount_of_stuff_after_comma =
       float
@@ -186,6 +190,7 @@ defmodule Electricity.Value do
   # Operations
   # ==========
 
+  @spec operation((Decimal.t(), Decimal.t() -> Decimal.t()), t(), t()) :: t()
   def operation(func, left, right) do
     func.(
       left |> run() |> Decimal.new(),
