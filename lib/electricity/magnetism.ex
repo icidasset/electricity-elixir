@@ -1,5 +1,4 @@
 import Algae
-import TypeClass
 
 defmodule Electricity.Magnetism do
   @moduledoc """
@@ -19,7 +18,6 @@ end
 
 alias Electricity.{Magnetism}
 alias TypeClass.Property.Generator
-alias Witchcraft.Semigroup
 
 # Generator
 # ---------

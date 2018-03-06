@@ -23,6 +23,7 @@ defmodule Electricity.Mixfile do
     [
       {:algae, "~> 1.1.0"},
       {:decimal, "~> 1.0"},
+      {:quark, "~> 2.3.0"},
       {:type_class, "~> 1.2.2"},
       {:witchcraft, "~> 1.0"}
     ]

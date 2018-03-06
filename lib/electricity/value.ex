@@ -18,6 +18,31 @@ defmodule Electricity.Value do
     exponent: -6
   }
   ```
+
+  ## Examples
+
+    iex> v = new(2, 1)
+    iex> multiply(v, v)
+    %Electricity.Value{amount: 4, exponent: 2}
+
+    iex> v = new(1, 1)
+    iex> multiply(v, v)
+    %Electricity.Value{amount: 1, exponent: 2}
+
+    iex> a = new(1, 1)
+    iex> b = new(1, 2)
+    iex> multiply(a, b)
+    %Electricity.Value{amount: 1, exponent: 3}
+
+    iex> v = new(1, -1)
+    iex> multiply(v, v)
+    %Electricity.Value{amount: 1, exponent: -2}
+
+    iex> a = new(1, -2)
+    iex> b = new(1, -3)
+    iex> multiply(a, b)
+    %Electricity.Value{amount: 1, exponent: -5}
+
   """
 
   alias __MODULE__
@@ -26,7 +51,7 @@ defmodule Electricity.Value do
   # ==========
 
   defdata do
-    # Raw value to be combined with the metric prefix (see `power` property).
+    # Raw value to be combined with the metric prefix (see `exponent` property).
     amount :: non_neg_integer() \\ 0
 
     # The exponent used to raise the base 10.
@@ -38,54 +63,142 @@ defmodule Electricity.Value do
   # =====
 
   @doc """
-  Reduce a Value to a Float.
+  Scale a raw number.
+  Multiply by `10 ^ x`.
+
+  NOTE:
+  Uses `Float.round` to remove the weird float-rounding errors.
+
+    iex> scale(1, 1)
+    10.0
+
+    iex> scale(2, 3)
+    2000.0
+
   """
-  @spec normalize(t()) :: float()
-  def normalize(%Value{amount: amount, exponent: exponent}) do
-    amount * :math.pow(10, exponent)
+  def scale(number, exponent) do
+    Float.round(
+      number * :math.pow(10, exponent),
+      max(0, -exponent)
+    )
+  end
+
+  def scale_and_round(number, exponent) do
+    number
+    |> scale(exponent)
+    |> round()
+  end
+
+  def ensure_float(x), do: x / 1
+  def make_negative(x), do: x * -1
+
+  # Rays
+  # ====
+
+  @doc """
+  Remove zeros from the number.
+  """
+  def shrink_ray(float) do
+    str =
+      float
+      |> round()
+      |> to_string()
+
+    how_many_zeros =
+      str
+      |> String.trim_trailing("0")
+      |> String.length()
+      |> (fn x -> String.length(str) - x end).()
+
+    %Value{
+      amount: scale_and_round(float, -how_many_zeros),
+      exponent: how_many_zeros
+    }
   end
 
   @doc """
-  Changes the exponent to zero and normalizes the value.
+  Ensure a natural number.
   """
-  @spec reduce_unit_to_zero(t()) :: t()
-  def reduce_unit_to_zero(value) do
-    %{value | amount: normalize(value), exponent: 0}
+  def expand_ray(float) do
+    amount_of_stuff_after_comma =
+      float
+      |> Float.to_string()
+      |> (fn str ->
+            if String.contains?(str, "e"),
+              do: :erlang.float_to_binary(float, [{:decimals, 15}, :compact]),
+              else: str
+          end).()
+      |> String.split(".")
+      |> Enum.at(1)
+      |> String.length()
+
+    %Value{
+      amount: scale_and_round(float, amount_of_stuff_after_comma),
+      exponent: -amount_of_stuff_after_comma
+    }
   end
+
+  # Structs
+  # =======
 
   @doc """
   Turn a raw number into a `Value`.
+
+  Remove as many zeros as possible.
+  Or in other words, get as close as possible to the amount `1`.
   """
-  @spec pack(float()) :: t()
+  @spec pack(integer() | float()) :: t()
   def pack(number) do
     semi_rounded_number =
       number
-      |> (fn x -> x / 1 end).()
       |> abs()
+      |> ensure_float()
       |> Float.round(15)
 
-    split =
-      semi_rounded_number
-      |> to_string()
-      |> String.split(".")
-
-    case split do
-      [_, stuff_after_the_comma] ->
-        exponent = String.length(stuff_after_the_comma)
-        amount = semi_rounded_number * :math.pow(10, exponent)
-
-        %Value{
-          amount: round(amount),
-          exponent: -exponent
-        }
-
-      _ ->
-        %Value{
-          amount: number,
-          exponent: 0
-        }
-    end
+    # shrink or expand
+    if semi_rounded_number >= 1 &&
+         (String.contains?("#{semi_rounded_number}", "e") ||
+            String.ends_with?("#{semi_rounded_number}", ".0")),
+       do: shrink_ray(semi_rounded_number),
+       else: expand_ray(semi_rounded_number)
   end
+
+  @doc """
+  Reduce a `Value` to a float.
+
+    iex> v = new(1, 1)
+    iex> run(v)
+    10.0
+
+    iex> v = new(1, 1)
+    iex> run(%{v | exponent: 0})
+    1.0
+
+  """
+  @spec run(t()) :: float()
+  def run(%Value{amount: amount, exponent: exponent}) do
+    scale(amount, exponent)
+  end
+
+  defalias(unpack(value), as: :run)
+  defalias(to_float(value), as: :run)
+
+  # Operations
+  # ==========
+
+  def operation(func, left, right) do
+    func.(
+      left |> run() |> Decimal.new(),
+      right |> run() |> Decimal.new()
+    )
+    |> Decimal.to_float()
+    |> Value.pack()
+  end
+
+  def add(left, right), do: operation(&Decimal.add/2, left, right)
+  def subtract(left, right), do: operation(&Decimal.sub/2, left, right)
+  def multiply(left, right), do: operation(&Decimal.mult/2, left, right)
+  def divide(left, right), do: operation(&Decimal.div/2, left, right)
 end
 
 ###############################
@@ -115,37 +228,22 @@ definst Semigroup, for: Value do
   @doc """
   Append two values.
 
-      iex> left = %Value{
-      ...>   amount: 1,
-      ...>   exponent: 2,
-      ...> }
-      iex> right = %Value{
-      ...>   amount: 1,
-      ...>   exponent: -3,
-      ...> }
-      ...> append(left, right)
-      %Value{
-        amount: 100001,
-        exponent: -3,
-      }
+    iex> left = %Value{
+    ...>   amount: 1,
+    ...>   exponent: 2,
+    ...> }
+    iex> right = %Value{
+    ...>   amount: 1,
+    ...>   exponent: -3,
+    ...> }
+    ...> append(left, right)
+    %Value{
+      amount: 100001,
+      exponent: -3,
+    }
 
   """
-  def append(left, right) do
-    new_exponent =
-      left.exponent
-      |> min(right.exponent)
-      |> min(0)
-
-    %Value{
-      exponent: new_exponent,
-      amount:
-        Value.normalize(left)
-        |> (fn x -> x + Value.normalize(right) end).()
-        |> (fn x -> x * :math.pow(10, new_exponent * -1) end).()
-        |> round()
-        |> max(0)
-    }
-  end
+  def append(left, right), do: Value.add(left, right)
 end
 
 # Functor
