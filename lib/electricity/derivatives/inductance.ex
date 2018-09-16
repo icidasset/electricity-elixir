@@ -1,4 +1,5 @@
 defmodule Electricity.Derivatives.Inductance do
+
   @doc """
   Calculate the inductance of a single-layer air coil.
 
@@ -14,4 +15,5 @@ defmodule Electricity.Derivatives.Inductance do
   def single_layer_air_coil(%{radius: r, number_of_turns: n, length: l}) do
     :math.pow(r, 2) * :math.pow(n, 2) / (r * 9 + l * 10)
   end
+
 end

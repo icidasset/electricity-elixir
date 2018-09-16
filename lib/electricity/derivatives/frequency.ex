@@ -3,12 +3,14 @@ defmodule Electricity.Derivatives.Frequency do
   Frequency calculations.
   """
 
+
   @doc """
   Calculate frequency in Hz based on inductance and capacitance.
   """
   def generic(inductance: l, capacitance: c) do
     1 / (2 * :math.pi() * :math.sqrt(l * c))
   end
+
 
   @doc """
   Calculate the resonant frequency of a single-layer air coil.
@@ -19,4 +21,5 @@ defmodule Electricity.Derivatives.Frequency do
 
     generic(inductance: l, capacitance: c)
   end
+
 end

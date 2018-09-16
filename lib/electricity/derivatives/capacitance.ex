@@ -3,6 +3,7 @@ defmodule Electricity.Derivatives.Capacitance do
   Capacitance calculations.
   """
 
+
   @doc """
   Calculate the (parasitic) capacitance of a single-layer air coil,
   using the formulae of Medhurst.
@@ -59,4 +60,5 @@ defmodule Electricity.Derivatives.Capacitance do
     # Return
     p * r * :math.pow(10, -12)
   end
+
 end

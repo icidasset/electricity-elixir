@@ -1,11 +1,4 @@
-import Algae
-import TypeClass
-
-######################
-# Definition & Logic #
-######################
-
-defmodule Electricity.Value do
+defmodule Electricity.Quantity do
   @moduledoc """
   A positive non-negative integer with an associated metric prefix.
 
@@ -13,7 +6,7 @@ defmodule Electricity.Value do
   42 micro Ohms
 
   ```
-  %Electricity.Value{
+  %Electricity.Quantity{
     amount: 42,
     exponent: -6
   }
@@ -21,43 +14,56 @@ defmodule Electricity.Value do
 
   ## Examples
 
-    iex> v = new(2, 1)
-    iex> multiply(v, v)
-    %Electricity.Value{amount: 4, exponent: 2}
+      iex> v = new(2, 1)
+      iex> multiply(v, v)
+      %Electricity.Quantity{amount: 4, exponent: 2}
 
-    iex> v = new(1, 1)
-    iex> multiply(v, v)
-    %Electricity.Value{amount: 1, exponent: 2}
+      iex> v = new(1, 1)
+      iex> multiply(v, v)
+      %Electricity.Quantity{amount: 1, exponent: 2}
 
-    iex> a = new(1, 1)
-    iex> b = new(1, 2)
-    iex> multiply(a, b)
-    %Electricity.Value{amount: 1, exponent: 3}
+      iex> a = new(1, 1)
+      iex> b = new(1, 2)
+      iex> multiply(a, b)
+      %Electricity.Quantity{amount: 1, exponent: 3}
 
-    iex> v = new(1, -1)
-    iex> multiply(v, v)
-    %Electricity.Value{amount: 1, exponent: -2}
+      iex> v = new(1, -1)
+      iex> multiply(v, v)
+      %Electricity.Quantity{amount: 1, exponent: -2}
 
-    iex> a = new(1, -2)
-    iex> b = new(1, -3)
-    iex> multiply(a, b)
-    %Electricity.Value{amount: 1, exponent: -5}
+      iex> a = new(1, -2)
+      iex> b = new(1, -3)
+      iex> multiply(a, b)
+      %Electricity.Quantity{amount: 1, exponent: -5}
+
+      iex> a = new(1, -2)
+      iex> b = new(10, -3)
+      iex> run(a) == run(b)
+      true
 
   """
 
+  import Algae
+  import TypeClass
+
   alias __MODULE__
 
-  # Definition
-  # ==========
+
+  # 🌳
+
 
   defdata do
+
     # Raw value to be combined with the metric prefix (see `exponent` property).
     amount :: non_neg_integer() \\ 0
 
     # The exponent used to raise the base 10.
     # Is used to specify a metric/si prefix.
     exponent :: integer() \\ 0
+
   end
+
+
 
   # Logic
   # =====
@@ -84,6 +90,7 @@ defmodule Electricity.Value do
     )
   end
 
+
   @spec scale_and_round(float() | integer(), integer()) :: integer()
   def scale_and_round(number, exponent) do
     number
@@ -91,8 +98,11 @@ defmodule Electricity.Value do
     |> round()
   end
 
+
   @spec ensure_float(float() | integer()) :: float()
   def ensure_float(x), do: x / 1
+
+
 
   # Rays
   # ====
@@ -113,11 +123,12 @@ defmodule Electricity.Value do
       |> String.length()
       |> (fn x -> String.length(str) - x end).()
 
-    %Value{
+    %Quantity{
       amount: scale_and_round(float, -how_many_zeros),
       exponent: how_many_zeros
     }
   end
+
 
   @doc """
   Ensure a natural number.
@@ -136,17 +147,19 @@ defmodule Electricity.Value do
       |> Enum.at(1)
       |> String.length()
 
-    %Value{
+    %Quantity{
       amount: scale_and_round(float, amount_of_stuff_after_comma),
       exponent: -amount_of_stuff_after_comma
     }
   end
 
+
+
   # Structs
   # =======
 
   @doc """
-  Turn a raw number into a `Value`.
+  Turn a raw number into a `Quantity`.
 
   Remove as many zeros as possible.
   Or in other words, get as close as possible to the amount `1`.
@@ -162,13 +175,14 @@ defmodule Electricity.Value do
     # shrink or expand
     if semi_rounded_number >= 1 &&
          (String.contains?("#{semi_rounded_number}", "e") ||
-            String.ends_with?("#{semi_rounded_number}", ".0")),
+          String.ends_with?("#{semi_rounded_number}", ".0")),
        do: shrink_ray(semi_rounded_number),
        else: expand_ray(semi_rounded_number)
   end
 
+
   @doc """
-  Reduce a `Value` to a float.
+  Reduce a `Quantity` to a float.
 
     iex> v = new(1, 1)
     iex> run(v)
@@ -180,12 +194,15 @@ defmodule Electricity.Value do
 
   """
   @spec run(t()) :: float()
-  def run(%Value{amount: amount, exponent: exponent}) do
+  def run(%Quantity{amount: amount, exponent: exponent}) do
     scale(amount, exponent)
   end
 
-  defalias(unpack(value), as: :run)
-  defalias(to_float(value), as: :run)
+
+  defalias(unpack(quantity), as: :run)
+  defalias(to_float(quantity), as: :run)
+
+
 
   # Operations
   # ==========
@@ -197,65 +214,83 @@ defmodule Electricity.Value do
       right |> run() |> Decimal.new()
     )
     |> Decimal.to_float()
-    |> Value.pack()
+    |> Quantity.pack()
   end
+
 
   def add(left, right), do: operation(&Decimal.add/2, left, right)
   def subtract(left, right), do: operation(&Decimal.sub/2, left, right)
   def multiply(left, right), do: operation(&Decimal.mult/2, left, right)
   def divide(left, right), do: operation(&Decimal.div/2, left, right)
+
 end
+
+
 
 ###############################
 # Implementations & Instances #
 ###############################
 
-alias Electricity.Value
+
+import TypeClass
+
+alias Electricity.Quantity
 alias TypeClass.Property.Generator
 alias Witchcraft.{Functor, Semigroup}
+
 
 # Generator
 # ---------
 
-defimpl Generator, for: Value do
+defimpl Generator, for: Quantity do
+
   def generate(_) do
-    %Value{
+    %Quantity{
       amount: :rand.uniform(999_999),
       exponent: :rand.uniform(10) - 5 - 1
     }
   end
+
 end
+
+
 
 # Semigroup
 # ---------
 
-definst Semigroup, for: Value do
-  @doc """
-  Append two values.
+definst Semigroup, for: Quantity do
 
-    iex> left = %Value{
+  @doc """
+  Append two quantities.
+
+    iex> left = %Quantity{
     ...>   amount: 1,
     ...>   exponent: 2,
     ...> }
-    iex> right = %Value{
+    iex> right = %Quantity{
     ...>   amount: 1,
     ...>   exponent: -3,
     ...> }
     ...> append(left, right)
-    %Value{
+    %Quantity{
       amount: 100001,
       exponent: -3,
     }
 
   """
-  def append(left, right), do: Value.add(left, right)
+  def append(left, right), do: Quantity.add(left, right)
+
 end
+
+
 
 # Functor
 # -------
 
-definst Functor, for: Value do
-  def map(value, func) do
-    %{value | amount: func.(value.amount)}
+definst Functor, for: Quantity do
+
+  def map(quantity, func) do
+    %{quantity | amount: func.(quantity.amount)}
   end
+
 end
